@@ -26,9 +26,9 @@ const prefix = ".";
 const colums = false;
 
 
-var ch = ".."
-var link = "Please wait, the bot hasn't found the link yet."
-var last = "The bot hasn't had time to load the last PUG yet."
+var ch = "."
+var link = "."
+var last = "No games since bot was started."
 var players = [];
 for (var i = 0; i < pugs.length; i++) {
 	players.push(new Array());
@@ -134,7 +134,7 @@ function updateLast(players, pug) {
 function writeData() {
 	try {
 		let data = {players: fromPlayers(players), last: last, invite: link, channel: ch}
-		fs.writeFile('data.json', JSON.stringify(data), (err) => {
+		fs.writeFile('./data.json', JSON.stringify(data), (err) => {
 			if (err) throw err;
 			console.log("Write successfull.");
 		});
@@ -149,7 +149,11 @@ function writeData() {
 client.once("ready", () => {
 	try {
 		fs.readFile('data.json', (err, d) => {
-			if (err) throw err;
+			if (err) {
+				if (err == "Error: ENOENT: no such file or directory, open 'data.json'") writeData()
+				else throw err;
+				return;
+			}
 			let data = JSON.parse(d);
 			last = data.last;
 			players = toPlayers(data.players);
@@ -157,10 +161,7 @@ client.once("ready", () => {
 			ch = data.channel;
 		});
 	} catch (err) {
-		console.log("Failed to load data form './data.json'\n\n" + err);
-		last = "Unable to read last PUG from disk.";
-		link = "Unable to read invite link from disk.";
-		ch = ".";
+		console.log("Unable to read data from 'data.json'\n\n" + err);
 	}
 	console.log("Bot started.");
 });
