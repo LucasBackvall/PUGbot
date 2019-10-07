@@ -1,1 +1,14 @@
-{"players":[[],["127538676803698688"],["127538676803698688","628640286616059914"],[],[],[],[]],"last":"Last game:\n\n**2v** with: **LurreB**, **PUGbot<uni>**","invite":"https://discord.gg/pBW7af6","channel":"testkanal"}
+{
+	"players":[
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[]
+	],
+	"last":"No PUG started since the bot was added to server.",
+	"invite":".",
+	"channel":"."
+}
