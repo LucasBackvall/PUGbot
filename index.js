@@ -4,6 +4,7 @@ const client = new Discord.Client();
 const fs = require('fs');
 const pugs = require('./pugs.json');
 
+
 // Authentication
 try{
 	const auth = require("./auth.json")
@@ -58,6 +59,25 @@ function getUser(mention) {
 		}
 		return client.users.get(mention);
 	}
+}
+
+
+function fromChannel(channelObj) {
+	channel = channelObj.toString()
+	console.log("\n\nchannel:\n\n"+channel);
+	if (channel.startsWith('<#') && channel.endsWith('>')) {
+		channel = channel.slice(2, -1);
+		if (channel.startsWith('!')) {
+			channel = channel.slice(1);
+		}
+		console.log("\n\nchannel_edited:\n\n"+channel);
+		return channel;
+	}
+}
+
+
+function toChannel(channel) {
+	return client.channels.get(channel)
 }
 
 
@@ -132,41 +152,17 @@ function updateLast(players, pug) {
 
 
 function writeData() {
-	try {
-		let data = {players: fromPlayers(players), last: last, invite: link, channel: ch}
-		fs.writeFile('./data.json', JSON.stringify(data), (err) => {
-			if (err) throw err;
-			console.log("Write successfull.");
-		});
-		return true;
-	} catch (err) {
-		console.log("Unable to write data to 'data.json'\n\n" + err);
-		return false;
-	}
+	let data = {players: fromPlayers(players), last: last, invite: link, channel: fromChannel(ch)}
+	console.log("\n\ndata:\n\n"+util.inspect(data));
+	fs.writeFile('./data.json', JSON.stringify(data), (err) => {
+		if (err) throw err;
+		console.log("Write successfull.");
+	});
+	return true;
 }
 
 
-client.once("ready", () => {
-	try {
-		fs.readFile('data.json', (err, d) => {
-			if (err) {
-				if (err == "Error: ENOENT: no such file or directory, open 'data.json'") writeData()
-				else throw err;
-				return;
-			}
-			let data = JSON.parse(d);
-			last = data.last;
-			players = toPlayers(data.players);
-			link = data.invite;
-			ch = data.channel;
-		});
-	} catch (err) {
-		console.log("Unable to read data from 'data.json'\n\n" + err);
-	}
-	console.log("Bot started.");
-});
-
-client.on("message", message => {
+function onMessage(message) {
 	try{
 		var sender = message.author;
 		
@@ -183,7 +179,7 @@ client.on("message", message => {
 		// DM commands are also disallowed so you can't enter a list without people seeing it.
 		// TODO: Allow some commands in DM. 
 		// If a report system is implemented you should be able to report players in DM to bot.
-		if (message.channel.type != "text" || command != "setchannel" && ch != "." && ch != message.channel.name) return;
+		if (message.channel.type != "text" || command != "setchannel" && ch != "." && ch != message.channel) return;
 		
 		console.log(sender.username + ": " + command +" ("+ args + ")")	
 		
@@ -280,7 +276,7 @@ client.on("message", message => {
 			// Set current channel to the operating channel of the bot.
 			case "setchannel":
 				if (!message.member.roles.some(role => role.name === "PUGadmin")) {message.channel.send("Only PUGadmins can perform this command.");break;}
-				ch = message.channel.name;
+				ch = message.channel;
 				if (writeData()) message.channel.send("I will now operate in this channel.")
 				else message.channel.send("Unable to write new operating channel to disk. Will operate here untill I'm restarted.");
 				break;
@@ -426,5 +422,56 @@ client.on("message", message => {
 	} catch (err) {
 		console.log("Error parsing this command.\n\n" + err);
 	}
+}
+
+
+client.once("ready", () => {
+	fs.readFile('data.json', (err, d) => {
+		if (err) {
+			if (err == "Error: ENOENT: no such file or directory, open 'data.json'") {
+				console.log("No data.json found. Creating a new one...");
+				writeData();
+				return;
+			}
+			else throw err;
+		}
+		let data = JSON.parse(d);
+		last = data.last;
+		players = toPlayers(data.players);
+		link = data.invite;
+		ch = toChannel(data.channel);
+	});
+	console.log("Bot started.");
+});
+
+client.on("message", message => {
+	onMessage(message);
+});
+
+client.on("messageUpdate", (oldMessage, newMessage) => {
+	onMessage(newMessage);
+});
+
+client.on("presenceUpdate", (oldMember, newMember) => {
+	if (newMember.presence.status == "offline") {
+		removePlayerAll(oldMember.user);
+	if (ch != ".") ch.send("Removed "+oldMember.user.username+" from all lists because he/she went offline.");
+		console.log("Removed "+oldMember.user.username+" from all lists because he/she went offline.");
+	}
+});
+
+client.on("guildMemberAdd", (guildMember) => {
+	var rich = new Discord.RichEmbed()
+		.setColor("#FA6607")
+		.setTitle("Welcome to StarCraft 2 Universe!")
+		.setImage("https://media.discordapp.net/attachments/620428169442492417/628655402384621578/7f720d246ac5f7b79b03ae6c31a75645--starcraft--logodesign.jpg")
+		.setThumbnail("https://i.imgur.com/kTocgXw.jpg")
+		.addField("This server is using a PUG bot (Me!) you can find me in the channel #"+ch.name+" on the server.", "For more info, write .help in #"+ch, colums)
+	guildMember.user.createDM().then(function(channel) {
+		channel.send(rich);
+		console.log("Sent welcome message to "+guildMember.user.username);
+	}, function(err) {
+		console.log("Couldn't send welcome message to "+guildMember.user.username+"\n\n" + err)
+	});
 });
 
