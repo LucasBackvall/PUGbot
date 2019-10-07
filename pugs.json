@@ -1,9 +1,9 @@
 [
-  { "name": "2v",  "max": 2 },
-  { "name": "3v",  "max": 3 },
-  { "name": "4v",  "max": 4 },
-  { "name": "1v1", "max": 2 },
-  { "name": "2v2", "max": 4 },
-  { "name": "3v3", "max": 6 },
-  { "name": "4v4", "max": 8 }
+  { "name": "2v",  "info": "2 players vs random (ranked / unranked)", "max": 2 },
+  { "name": "3v",  "info": "3 players vs random (ranked / unranked)", "max": 3 },
+  { "name": "4v",  "info": "4 players vs random (ranked / unranked)", "max": 4 },
+  { "name": "1v1", "info": "1 player vs 1 player (custom)" ,"max": 2 },
+  { "name": "2v2", "info": "2 players vs 2 players (custom)", "max": 4 },
+  { "name": "3v3", "info": "3 players vs 3 players (custom)", "max": 6 },
+  { "name": "4v4", "info": "4 players vs 4 players (custom)", "max": 8 }
 ]

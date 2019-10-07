@@ -21,8 +21,10 @@ try{
 	});
 }
 
+
 const prefix = ".";
 const colums = false;
+
 
 var ch = ".."
 var link = "Please wait, the bot hasn't found the link yet."
@@ -31,6 +33,7 @@ var players = [];
 for (var i = 0; i < pugs.length; i++) {
 	players.push(new Array());
 }
+
 
 function printPUG(i) {
 	var msg = pugs[i].name
@@ -69,6 +72,7 @@ function fromPlayers(lists) {
 	});
 	return out;
 }
+
 
 function toPlayers(lists) {
 	var out = [];
@@ -126,6 +130,7 @@ function updateLast(players, pug) {
 	});
 }
 
+
 function writeData() {
 	try {
 		let data = {players: fromPlayers(players), last: last, invite: link, channel: ch}
@@ -175,7 +180,8 @@ client.on("message", message => {
 		
 		// Disallow commands outside of specified channel unless it's the setchannel command.
 		// DM commands are also disallowed so you can't enter a list without people seeing it.
-		// TODO: Allow some commands in DM. If a report system is implemented you should be able to report players in DM to bot.
+		// TODO: Allow some commands in DM. 
+		// If a report system is implemented you should be able to report players in DM to bot.
 		if (message.channel.type != "text" || command != "setchannel" && ch != "." && ch != message.channel.name) return;
 		
 		console.log(sender.username + ": " + command +" ("+ args + ")")	
@@ -184,6 +190,13 @@ client.on("message", message => {
 			
 			// Display helpmessage
 			case "help":
+				var rich = new Discord.RichEmbed()
+					.setColor("#FA6607")
+					.setTitle("Available PUGs:")
+				pugs.forEach(function(pug) {
+					rich.addField("**"+pug.name+"**", pug.info + " - do '.j "+pug.name+"' to join!")
+				});
+				message.channel.send(rich);
 				var rich = new Discord.RichEmbed()
 					.setColor("#FA6607")
 					.setTitle("Available commands:")
@@ -302,11 +315,16 @@ client.on("message", message => {
 								var msg = "Found a game!\n\n**"+pugs[i].name+"** is filled! All players (**"+players[i]+"**) please join a voice channel together.";
 								msg += "\n\nYou have all been automatically removed from all other playlists."
 								message.channel.send(msg);
+								sender.createDM().then(function(channel) {
+									channel.send(msg);
+								}, function(err) {
+									colsole.log("Couldn't send found game .j author");
+								});
 								players[i].forEach(function (participant) {
 									participant.createDM().then(function(channel) {
 										channel.send(msg);
 									}, function(err) {
-										console.log("Couldn't send found game DMs.")
+										console.log("Couldn't send found game DMs.");
 									});
 									removePlayerAll(participant);
 									removePlayerAll(sender); // Voodoo shit, won't remove the sender for some unknown reason.ll
