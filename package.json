@@ -1,27 +1,24 @@
 {
-  "name": "pugbot",
-  "version": "1.0.0",
-  "description": "An easy to use bot for finding games with other people on your discord server!",
-  "main": "index.js",
-  "scripts": {
-    "start": "./wetty.js -c 'node index.js'"
-  },
-  "dependencies": {
-    "express": "^4.14.1",
-    "socket.io": "^1.7.2",
-    "pty.js": "^0.3.1",
-    "optimist": "^0.6.1",
-    "discord.js": "^11.5.1"
-  },
-  "engines": {
-    "node": "6.9.5"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://api.glitch.com/git/pugbot"
-  },
-  "keywords": [
-    "pug"
-  ],
-  "author": "Lucas Bäckvall"
+	"name": "pugbot",
+	"version": "1.0.0",
+	"description": "An easy to use bot for finding games with other people on your discord server!",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"dependencies": {
+		"discord.js": "^11.5.1"
+	},
+	"engines": {
+		"node": "6.9.5"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/LucasBackvall/PUGbot/"
+	},
+	"keywords": [
+		"pug"
+	],
+	"author": "Lucas Bäckvall",
+	"license": "ISC"
 }
