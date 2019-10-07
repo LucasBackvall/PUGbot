@@ -1,0 +1,9 @@
+[
+  { "name": "2v",  "max": 2 },
+  { "name": "3v",  "max": 3 },
+  { "name": "4v",  "max": 4 },
+  { "name": "1v1", "max": 2 },
+  { "name": "2v2", "max": 4 },
+  { "name": "3v3", "max": 6 },
+  { "name": "4v4", "max": 8 }
+]
