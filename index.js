@@ -64,13 +64,11 @@ function getUser(mention) {
 
 function fromChannel(channelObj) {
 	channel = channelObj.toString()
-	console.log("\n\nchannel:\n\n"+channel);
 	if (channel.startsWith('<#') && channel.endsWith('>')) {
 		channel = channel.slice(2, -1);
 		if (channel.startsWith('!')) {
 			channel = channel.slice(1);
 		}
-		console.log("\n\nchannel_edited:\n\n"+channel);
 		return channel;
 	}
 }
@@ -112,14 +110,18 @@ function removePlayer(i, name) {
 	var j = players[i].indexOf(name)
 	if (j != -1) {
 		players[i].splice(j, 1);
+		return true;
 	}
+	return false;
 }
 
 
 function removePlayerAll(name) {
+	var removed = false;
 	for (var i = 0; i < pugs.length; i++) {
-		removePlayer(i, name);
+		removed = removePlayer(i, name) || removed;
 	}
+	return removed
 }
 
 
@@ -153,7 +155,6 @@ function updateLast(players, pug) {
 
 function writeData() {
 	let data = {players: fromPlayers(players), last: last, invite: link, channel: fromChannel(ch)}
-	console.log("\n\ndata:\n\n"+util.inspect(data));
 	fs.writeFile('./data.json', JSON.stringify(data), (err) => {
 		if (err) throw err;
 		console.log("Write successfull.");
@@ -454,9 +455,11 @@ client.on("messageUpdate", (oldMessage, newMessage) => {
 
 client.on("presenceUpdate", (oldMember, newMember) => {
 	if (newMember.presence.status == "offline") {
-		removePlayerAll(oldMember.user);
-	if (ch != ".") ch.send("Removed "+oldMember.user.username+" from all lists because he/she went offline.");
-		console.log("Removed "+oldMember.user.username+" from all lists because he/she went offline.");
+		if (removePlayerAll(newMember.user) && ch != ".") {
+			ch.send("Removed "+oldMember.user.username+" from all lists because he/she went offline.\n\n"+listactive());
+			console.log("Removed "+oldMember.user.username+" from all lists because he/she went offline.");
+			writeData();
+		}
 	}
 });
 
