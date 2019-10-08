@@ -468,7 +468,7 @@ client.on("guildMemberAdd", (guildMember) => {
 		.setColor("#FA6607")
 		.setTitle("Welcome to StarCraft 2 Universe!")
 		.setImage("https://media.discordapp.net/attachments/620428169442492417/628655402384621578/7f720d246ac5f7b79b03ae6c31a75645--starcraft--logodesign.jpg")
-		.setThumbnail("https://i.imgur.com/kTocgXw.jpg")
+		.setThumbnail("https://cdn.discordapp.com/attachments/620428169442492417/630935040884211722/SC22222---roood222.jpg")
 		.addField("This server is using a PUG bot (Me!) you can find me in the channel #"+ch.name+" on the server.", "For more info, write .help in "+ch, colums)
 	guildMember.user.createDM().then(function(channel) {
 		channel.send(rich);
