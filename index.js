@@ -297,6 +297,7 @@ function onMessage(message) {
 				
 			
 			// Join a PUG
+			case "join":
 			case "j":
 				var lfg = true;
 				// For each PUG
@@ -383,6 +384,8 @@ function onMessage(message) {
 			
 			case "promote":
 			case "p":
+				message.channel.send("Promote has been temporarily disabled.");
+				break;
 				if (args.length == 0) message.channel.send("@here\n" + listactive())
 				else {
 					var msg = "@here\n```fix\nFollowing PUG(s) were promoted by "+sender.username+"\n";
