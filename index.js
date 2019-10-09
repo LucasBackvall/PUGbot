@@ -106,7 +106,7 @@ function toPlayers(lists) {
 
 
 function removePlayer(i, name) {
-	if (players[i] == undefined) {return;}
+	if (players[i] == undefined) {return false;}
 	var j = players[i].indexOf(name)
 	if (j != -1) {
 		players[i].splice(j, 1);
