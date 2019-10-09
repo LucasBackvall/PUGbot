@@ -326,8 +326,8 @@ function onMessage(message) {
 										console.log("Couldn't send found game DMs.");
 									});
 									removePlayerAll(participant);
-									removePlayerAll(sender); // Voodoo shit, won't remove the sender for some unknown reason.ll
 								});
+								removePlayerAll(sender); // Voodoo shit, won't remove the sender for some unknown reason.ll
 								break;
 							}
 						// If player already in PUG
