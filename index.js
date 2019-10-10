@@ -26,6 +26,11 @@ try{
 const prefix = ".";
 const colums = false;
 var data = {};
+var timer = {};
+
+function resetTimer(guild) {
+	timer[guild] = false
+}
 
 function printPUG(guild, i) {
 	let msg = pugs[i].name
@@ -190,7 +195,7 @@ function onMessage(message) {
 		// If this is the first interaction with a guild:
 		// create new data-entry for guild.
 		try {
-			let _ch = data[guild].channel;
+			let _test = data[guild].channel;
 		} catch(err) {
 			data[guild] =
 				{
@@ -204,6 +209,10 @@ function onMessage(message) {
 			});
 			console.log("New Guild!\n\n" + util.inspect(data));
 			writeData();
+		}
+		if (timer[guild] == undefined) {
+			console.log("Created timer for guild.");
+			timer[guild] = false;
 		}
 		
 		// Disallow commands outside of specified channel unless it's the setchannel command.
@@ -407,8 +416,10 @@ function onMessage(message) {
 			
 			case "promote":
 			case "p":
-				// message.channel.send("Promote has been temporarily disabled.");
-				// break;
+				if (timer[guild] == true) {
+					message.channel.send("Can't promote again yet.");
+					break;
+				}
 				if (args.length == 0) message.channel.send("@here\n" + listactive(guild))
 				else {
 					let msg = "@here\n```fix\nFollowing PUG(s) were promoted by "+sender.username+"\n";
@@ -420,6 +431,8 @@ function onMessage(message) {
 					msg += "```";
 					message.channel.send(msg);
 				}
+				timer[guild] = true;
+				setTimeout(resetTimer, 10*60*1000, guild);
 				break;
 			
 			
