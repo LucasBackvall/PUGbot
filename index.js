@@ -25,24 +25,15 @@ try{
 
 const prefix = ".";
 const colums = false;
+var data = {};
 
-
-var ch = "."
-var link = "."
-var last = "No games since bot was started."
-var players = [];
-for (var i = 0; i < pugs.length; i++) {
-	players.push(new Array());
-}
-
-
-function printPUG(i) {
-	var msg = pugs[i].name
+function printPUG(guild, i) {
+	let msg = pugs[i].name
 	while (msg.length < 3) { msg += " ";}
 	// \uD83C\uDF00 
-	msg += " (" + players[i].length + "/" + pugs[i].max + "): ";
-	var first = true;
-	players[i].forEach(function (player) {
+	msg += " (" + data[guild].players[i].length + "/" + pugs[i].max + "): ";
+	let first = true;
+	allPlayers(guild)[i].forEach(function (player) {
 		if (first) {msg += player.username;first=false;}
 		else {msg += ", " + player.username;}
 	});
@@ -80,9 +71,9 @@ function toChannel(channel) {
 
 
 function fromPlayers(lists) {
-	var out = [];
+	let out = [];
 	lists.forEach(function (list) {
-		var olist = [];
+		let olist = [];
 		list.forEach(function (player) {
 			olist.push(player.id);
 		});
@@ -93,68 +84,70 @@ function fromPlayers(lists) {
 
 
 function toPlayers(lists) {
-	var out = [];
+	let out = [];
 	lists.forEach(function (list) {
-		var olist = [];
-		list.forEach(function (id) {
-			olist.push(client.users.get(id));
+		let olist = [];
+		list.forEach(function (userid) {
+			olist.push(client.users.get(userid));
 		});
 		out.push(olist);
 	});
 	return out;
 }
 
+function allPlayers(guild) {
+	return toPlayers(data[guild].players);
+}
 
-function removePlayer(i, name) {
-	if (players[i] == undefined) {return false;}
-	var j = players[i].indexOf(name)
+
+function removePlayer(guild, i, userid) {
+	let j = data[guild].players[i].indexOf(userid);
 	if (j != -1) {
-		players[i].splice(j, 1);
+		data[guild].players[i].splice(j, 1);
 		return true;
 	}
 	return false;
 }
 
 
-function removePlayerAll(name) {
-	var removed = false;
-	for (var i = 0; i < pugs.length; i++) {
-		removed = removePlayer(i, name) || removed;
+function removePlayerAll(guild, userid) {
+	let removed = false;
+	for (let i = 0; i < pugs.length; i++) {
+		removed = removePlayer(guild, i, userid) || removed;
 	}
 	return removed
 }
 
 
-function listactive() {
-	var anyone = false;
-	for (var i = 0; i < players.length; i++) {
-		if (players[i].length > 0) {anyone = true;}
+function listactive(guild) {
+	let anyone = false;
+	for (let i = 0; i < data[guild].players.length; i++) {
+		if (data[guild].players[i].length > 0) {anyone = true;}
 	}
 	if (!anyone) {
 		return "There is currently nobody registered for a PUG.";
 	}
-	var msg = "```fix\nAll PUGs with registered players:\n";
-	for (var i = 0; i < pugs.length; i++) {
-		if (players[i].length > 0) {
-			msg += "\n" + printPUG(i);
+	let msg = "```fix\nAll PUGs with registered players:\n";
+	for (let i = 0; i < pugs.length; i++) {
+		if (data[guild].players[i].length > 0) {
+			msg += "\n" + printPUG(guild, i);
 		}
 	}
 	return msg + "```"
 }
 
 
-function updateLast(players, pug) {
-	last = "Last game:\n\n**"+pug.name+"** with: ";
-	var first = true;
+function updateLast(guild, players, pug) {
+	data[guild].last = "Last game:\n\n**"+pug.name+"** with: ";
+	let first = true;
 	players.forEach(function (player) {
-		if (first) {last += "**"+player.username+"**";first=false;}
-		else {last += ", " + "**"+player.username+"**";;}
+		if (first) {data[guild].last += "**"+player.username+"**";first=false;}
+		else {data[guild].last += ", " + "**"+player.username+"**";}
 	});
 }
 
 
 function writeData() {
-	let data = {players: fromPlayers(players), last: last, invite: link, channel: fromChannel(ch)}
 	fs.writeFile('./data.json', JSON.stringify(data), (err) => {
 		if (err) throw err;
 		console.log("Write successfull.");
@@ -162,10 +155,28 @@ function writeData() {
 	return true;
 }
 
+function onLeave(oldMember, newMember) {
+	let guild = newMember.guild.id;
+	if (newMember.presence.status == "offline") {
+		if (removePlayerAll(guild, newMember.user.id) && data[guild].ch != ".") {
+			ch.send("Removed "+oldMember.user.username+" from all lists because he/she went offline.\n\n"+listactive(guild));
+			console.log("Removed "+oldMember.user.username+" from all lists because he/she went offline.");
+			writeData();
+		}
+	}
+
+}
+
 
 function onMessage(message) {
 	try{
-		var sender = message.author;
+		// DM commands are disallowed so you can't enter a list without people seeing it.
+		// It also simplifies letting me define guild up top
+		// TODO: Allow some commands in DM. 
+		// If a report system is implemented you should be able to report players in DM to bot.
+		if (message.channel.type != "text") return;
+		let sender = message.author;
+		let guild = message.guild.id;
 		
 		// Ignore messages that arent commands or that's recieved from bots
 		if (!message.content.startsWith(prefix) || sender.bot) return;
@@ -176,11 +187,27 @@ function onMessage(message) {
 		const args = message.content.slice(prefix.length).split(/ +/);
 		const command = args.shift().toLowerCase();
 		
+		// If this is the first interaction with a guild:
+		// create new data-entry for guild.
+		try {
+			let _ch = data[guild].channel;
+		} catch(err) {
+			data[guild] =
+				{
+					"players": [],
+					"last": "No games since bot was started.",
+					"invite": ".",
+					"channel":"."
+				}
+			pugs.forEach(function(pug) {
+				data[guild].players.push(new Array());
+			});
+			console.log("New Guild!\n\n" + util.inspect(data));
+			writeData();
+		}
+		
 		// Disallow commands outside of specified channel unless it's the setchannel command.
-		// DM commands are also disallowed so you can't enter a list without people seeing it.
-		// TODO: Allow some commands in DM. 
-		// If a report system is implemented you should be able to report players in DM to bot.
-		if (message.channel.type != "text" || command != "setchannel" && ch != "." && ch != message.channel) return;
+		if (command != "setchannel" && data[guild].channel != "." && toChannel(data[guild].channel) != message.channel) return;
 		
 		console.log(sender.username + ": " + command +" ("+ args + ")")	
 		
@@ -188,14 +215,14 @@ function onMessage(message) {
 			
 			// Display helpmessage
 			case "help":
-				var rich = new Discord.RichEmbed()
+				let rich = new Discord.RichEmbed()
 					.setColor("#FA6607")
 					.setTitle("Available PUGs:")
 				pugs.forEach(function(pug) {
 					rich.addField("**"+pug.name+"**", pug.info + " - do '.j "+pug.name+"' to join!")
 				});
 				message.channel.send(rich);
-				var rich = new Discord.RichEmbed()
+				rich = new Discord.RichEmbed()
 					.setColor("#FA6607")
 					.setTitle("Available commands:")
 					.addField(prefix + "help", "Show this message.", colums)
@@ -209,7 +236,7 @@ function onMessage(message) {
 					.addField(prefix + "promote (PUGs)", prefix +"p for short. Promote one or more PUGs. If you don't specify any PUGs all PUGs with registered players will be promoted.")
 				message.channel.send(rich);
 				if (message.member.roles.some(role => role.name === "PUGadmin")) {
-					var rich = new Discord.RichEmbed()
+					rich = new Discord.RichEmbed()
 						.setColor("#FA6607")
 						.setTitle("Available administrator commands:")
 						.addField(prefix + "reset", "Resets all PUGs.", colums)
@@ -228,16 +255,16 @@ function onMessage(message) {
 				}
 				break;
 			
-			
+
 			case "invite":
 			case "inv":
-				if (link == ".") message.channel.send("No invite link is set. Tell an administrator!")
-				else message.channel.send("Invite link:\n" + link);
+				if (data[guild].link == ".") message.channel.send("No invite link is set. Tell an administrator!")
+				else message.channel.send("Invite link:\n" + data[guild].link);
 				break;
 			
 			
 			case "setinvite":
-				link = args[0];
+				data[guild].link = args[0];
 				if (writeData()) message.channel.send("New invite link set!")
 				else message.channel.send("Unable to write invite link to disk.");
 				break;
@@ -247,16 +274,16 @@ function onMessage(message) {
 			case "reset":
 				if (!message.member.roles.some(role => role.name === "PUGadmin")) {message.channel.send("Only PUGadmins can perform this command.");break;}
 				if(args.length == 0) {
-					 for (var i = 0; i < pugs.length; i++) {
-						players[i] = new Array();
+					 for (let i = 0; i < pugs.length; i++) {
+						data[guild].players[i] = new Array();
 					}
 					message.channel.send("All PUGs reset!");
 				} else {
 					args.forEach(function(arg) {
-						for (var i = 0; i < pugs.length; i++) {
+						for (let i = 0; i < pugs.length; i++) {
 							if (pugs[i].name == arg) {
 								message.channel.send("**" +pugs[i].name+ "** reset!");
-								players[i] = new Array();
+								data[guild].players[i] = new Array();
 							}
 						}
 					});
@@ -268,7 +295,7 @@ function onMessage(message) {
 			// Allow the bot to use any channel
 			case "resetchannel":
 				if (!message.member.roles.some(role => role.name === "PUGadmin")) {message.channel.send("Only PUGadmins can perform this command.");break;}
-				ch = ".";
+				data[guild].channel = ".";
 				if (writeData()) message.channel.send("I will now operate in any channel.")
 				else message.channel.send("Unable to write new operating channel to disk. Will operate in any channel untill I'm restarted.");
 				break;
@@ -277,7 +304,7 @@ function onMessage(message) {
 			// Set current channel to the operating channel of the bot.
 			case "setchannel":
 				if (!message.member.roles.some(role => role.name === "PUGadmin")) {message.channel.send("Only PUGadmins can perform this command.");break;}
-				ch = message.channel;
+				data[guild].channel = fromChannel(message.channel);
 				if (writeData()) message.channel.send("I will now operate in this channel.")
 				else message.channel.send("Unable to write new operating channel to disk. Will operate here untill I'm restarted.");
 				break;
@@ -289,7 +316,7 @@ function onMessage(message) {
 				sender = getUser(args[0]);
 				args.splice(0, 1);
 				try {
-					var test = sender.username;
+					let test = sender.username;
 				} catch (err) {
 					message.channel.send("Tried to add non-user to PUG.");
 					break;
@@ -299,35 +326,31 @@ function onMessage(message) {
 			// Join a PUG
 			case "join":
 			case "j":
-				var lfg = true;
+				let lfg = true;
 				// For each PUG
-				for (var i = 0; i < pugs.length; i++) {
+				for (let i = 0; i < pugs.length; i++) {
 					// If PUG is in message argument and we're still looking for a group (lfg)
 					//	 If a player finds a game, they're no longer looking for a group (lfg)
 					if (args.indexOf(pugs[i].name) != -1 && lfg) {
 						// If player isn't in PUG
-						if (players[i].indexOf(sender) == -1) {
+						if (allPlayers(guild)[i].indexOf(sender) == -1) {
 							// If that PUG is now full (push returns new length of array)
-							if (players[i].push(sender) >= pugs[i].max) {
+							if (data[guild].players[i].push(sender.id) >= pugs[i].max) {
 								lfg = false; // Not looking for a group anymore
-								updateLast(players[i], pugs[i]);
-								var msg = "Found a game!\n\n**"+pugs[i].name+"** is filled! All players (**"+players[i]+"**) please join a voice channel together.";
+								updateLast(guild, data[guild].players[i], pugs[i]);
+								let msg = "Found a game!\n\n**"+pugs[i].name+"** is filled! All players (**"+allPlayers(guild)[i]+"**) please join a voice channel together.";
 								msg += "\n\nYou have all been automatically removed from all other playlists."
 								message.channel.send(msg);
-								sender.createDM().then(function(channel) {
-									channel.send(msg);
-								}, function(err) {
-									colsole.log("Couldn't send found game .j author");
-								});
-								players[i].forEach(function (participant) {
-									participant.createDM().then(function(channel) {
+								while (data[guild].players[i].length > 0) {
+									participant = data[guild].players[i][0]; 
+									removePlayerAll(guild, participant);
+									if (participant == client.user.id) continue;
+									client.users.get(participant).createDM().then(function(channel) {
 										channel.send(msg);
 									}, function(err) {
-										console.log("Couldn't send found game DMs.");
+										console.log("Couldn't send found game DM to ." + participant.username);
 									});
-									removePlayerAll(participant);
-								});
-								removePlayerAll(sender); // Voodoo shit, won't remove the sender for some unknown reason.ll
+								}
 								break;
 							}
 						// If player already in PUG
@@ -337,7 +360,7 @@ function onMessage(message) {
 					}
 				}
 				if (lfg) {
-					message.channel.send(listactive());
+					message.channel.send(listactive(guild));
 				}
 				writeData();
 				break;
@@ -351,9 +374,9 @@ function onMessage(message) {
 			
 			// Leave all PUGs
 			case "lva":
-				removePlayerAll(sender);
+				removePlayerAll(guild, sender.id);
 				//message.channel.send("Removed **" + sender + "** from all lists.");
-				message.channel.send(listactive());
+				message.channel.send(listactive(guild));
 				writeData();
 				break;
 			
@@ -369,29 +392,29 @@ function onMessage(message) {
 			case "leave":
 			case "lv":
 				args.forEach(function (pugname) {
-					for (var i = 0; i < pugs.length; i++) {
+					for (let i = 0; i < pugs.length; i++) {
 						if (pugs[i].name == pugname) {
-							removePlayer(i, sender);
+							removePlayer(guild, i, sender.id);
 							//message.channel.send("Removed **" + sender + "** from **" + pugname + "**");
 						}
 					}
 					console.log("\n\n");
 				});
-				message.channel.send(listactive());
+				message.channel.send(listactive(guild));
 				writeData();
 				break;
 			
 			
 			case "promote":
 			case "p":
-				message.channel.send("Promote has been temporarily disabled.");
-				break;
-				if (args.length == 0) message.channel.send("@here\n" + listactive())
+				// message.channel.send("Promote has been temporarily disabled.");
+				// break;
+				if (args.length == 0) message.channel.send("@here\n" + listactive(guild))
 				else {
-					var msg = "@here\n```fix\nFollowing PUG(s) were promoted by "+sender.username+"\n";
+					let msg = "@here\n```fix\nFollowing PUG(s) were promoted by "+sender.username+"\n";
 					args.forEach(function (arg) {
-						for (var i = 0; i < pugs.length; i++) {
-							if (pugs[i].name == arg) msg += "\n" + printPUG(i)
+						for (let i = 0; i < pugs.length; i++) {
+							if (pugs[i].name == arg) msg += "\n" + printPUG(guild, i)
 						}
 					});
 					msg += "```";
@@ -403,16 +426,16 @@ function onMessage(message) {
 			// List all PUGs with players registered
 			case "listactive":
 			case "lsa":
-				message.channel.send(listactive());
+				message.channel.send(listactive(guild));
 				break;
 			
 			
 			// List all PUGs
 			case "list":
 			case "ls":
-				var msg = "```fix\nAll PUGs:\n";
-				for (var i = 0; i < pugs.length; i++) {
-					msg += "\n" + printPUG(i);
+				let msg = "```fix\nAll PUGs:\n";
+				for (let i = 0; i < pugs.length; i++) {
+					msg += "\n" + printPUG(guild, i);
 				}
 				message.channel.send(msg + "```");
 				break;
@@ -420,7 +443,7 @@ function onMessage(message) {
 			
 			// Repeat last PUG
 			case "last":
-				message.channel.send(last);
+				message.channel.send(data[guild].last);
 				break;
 		}
 	} catch (err) {
@@ -439,11 +462,7 @@ client.once("ready", () => {
 			}
 			else throw err;
 		}
-		let data = JSON.parse(d);
-		last = data.last;
-		players = toPlayers(data.players);
-		link = data.invite;
-		ch = toChannel(data.channel);
+		data = JSON.parse(d);
 	});
 	console.log("Bot started.");
 });
@@ -457,17 +476,11 @@ client.on("messageUpdate", (oldMessage, newMessage) => {
 });
 
 client.on("presenceUpdate", (oldMember, newMember) => {
-	if (newMember.presence.status == "offline") {
-		if (removePlayerAll(newMember.user) && ch != ".") {
-			ch.send("Removed "+oldMember.user.username+" from all lists because he/she went offline.\n\n"+listactive());
-			console.log("Removed "+oldMember.user.username+" from all lists because he/she went offline.");
-			writeData();
-		}
-	}
+	onLeave(oldMember, newMember);
 });
 
 client.on("guildMemberAdd", (guildMember) => {
-	var rich = new Discord.RichEmbed()
+	let rich = new Discord.RichEmbed()
 		.setColor("#FA6607")
 		.setTitle("Welcome to StarCraft 2 Universe!")
 		.setImage("https://media.discordapp.net/attachments/620428169442492417/628655402384621578/7f720d246ac5f7b79b03ae6c31a75645--starcraft--logodesign.jpg")
