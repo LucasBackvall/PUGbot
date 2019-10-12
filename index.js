@@ -1,14 +1,22 @@
-const util = require("util");
+// Imports
 const Discord = require("discord.js");
-const client = new Discord.Client();
 const fs = require('fs');
+const util = require("util");
 const pugs = require('./pugs.json');
+
+// Declarations
+const client = new Discord.Client();
+const prefix = ".";
+const colums = false;
+var data = {};
+var timer = {};
+var log = "";
 
 // Authentication
 try{
 	const auth = require("./auth.json")
 	client.login(auth.token);
-	console.log("Authenticated.");
+	logStr("Authenticated.");
 } catch (err) {
 	const readline = require("readline").createInterface({
 		input: process.stdin,
@@ -16,16 +24,17 @@ try{
 	});
 	readline.question("What is your bot token?\n", token => {
 		client.login(token);
-		console.log("Authenticated.");
+		logStr("Authenticated.");
 		readline.close();
 	});
 }
 
 
-const prefix = ".";
-const colums = false;
-var data = {};
-var timer = {};
+
+function logStr(str) {
+	log += str + "\n\n";
+	console.log(str);
+}
 
 function resetTimer(guild) {
 	timer[guild] = false
@@ -152,23 +161,27 @@ function updateLast(guild, players, pug) {
 
 
 function writeData() {
-	fs.writeFile('./data.json', JSON.stringify(data), (err) => {
+	fs.writeFile('./data.json', JSON.stringify(data, undefined, 4), (err) => {
 		if (err) throw err;
-		console.log("Write successfull.");
+		logStr("Write successfull.");
 	});
 	return true;
 }
 
 function onLeave(oldMember, newMember) {
 	let guild = newMember.guild.id;
-	if (newMember.presence.status == "offline") {
-		if (removePlayerAll(guild, newMember.user.id) && data[guild].channel != ".") {
-			ch.send("Removed "+oldMember.user.username+" from all lists because he/she went offline.\n\n"+listactive(guild));
-			console.log("Removed "+oldMember.user.username+" from all lists because he/she went offline.");
+	try {
+		let ch = data[guild].channel;
+		if (newMember.presence.status == "offline") {
+			if (removePlayerAll(guild, newMember.user.id) && ch != ".") {
+				toChannel(ch).send("Removed "+newMember.user.username+" from all lists because he/she went offline.\n\n"+listactive(guild));
+			}
+			logStr("Removed **"+newMember.user.username+"** from all lists because he/she went offline.");
 			writeData();
 		}
+	} catch(err) {
+		// Catching presence updates from servers where a data-object hasn't been defined yet.
 	}
-
 }
 
 
@@ -205,18 +218,18 @@ function onMessage(message) {
 		pugs.forEach(function(pug) {
 			data[guild].players.push(new Array());
 		});
-		console.log("New Guild!\n\n" + util.inspect(data));
+		logStr("New Guild!\n\n" + util.inspect(data));
 		writeData();
 	}
 	if (timer[guild] == undefined) {
-		console.log("Created timer for guild.");
+		logStr("Created timer for guild.");
 		timer[guild] = false;
 	}
 	
 	// Disallow commands outside of specified channel unless it's the setchannel command.
 	if (command != "setchannel" && data[guild].channel != "." && toChannel(data[guild].channel) != message.channel) return;
 	
-	console.log(sender.username + ": " + command +" ("+ args + ")")	
+	logStr(sender.username + ": " + command +" ("+ args + ")")	
 	
 	switch (command) {
 		
@@ -256,7 +269,7 @@ function onMessage(message) {
 				sender.createDM().then(function(channel) {
 					channel.send(rich);
 				}, function(err) {
-					console.log("Couldn't send admincommands as DM.\n\n" + err)
+					logStr("Couldn't send admincommands as DM.\n\n" + util.inspect(err))
 					message.channel.send(rich);
 				});
 			}
@@ -355,7 +368,7 @@ function onMessage(message) {
 								client.users.get(participant).createDM().then(function(channel) {
 									channel.send(msg);
 								}, function(err) {
-									console.log("Couldn't send found game DM to ." + participant.username);
+									logStr("Couldn't send found game DM to ." + participant.username);
 								});
 							}
 							break;
@@ -382,7 +395,6 @@ function onMessage(message) {
 		// Leave all PUGs
 		case "lva":
 			removePlayerAll(guild, sender.id);
-			//message.channel.send("Removed **" + sender + "** from all lists.");
 			message.channel.send(listactive(guild));
 			writeData();
 			break;
@@ -402,10 +414,8 @@ function onMessage(message) {
 				for (let i = 0; i < pugs.length; i++) {
 					if (pugs[i].name == pugname) {
 						removePlayer(guild, i, sender.id);
-						//message.channel.send("Removed **" + sender + "** from **" + pugname + "**");
 					}
 				}
-				console.log("\n\n");
 			});
 			message.channel.send(listactive(guild));
 			writeData();
@@ -456,6 +466,18 @@ function onMessage(message) {
 		case "last":
 			message.channel.send(data[guild].last);
 			break;
+		
+		
+		// Send log to admin
+		case "log":
+			if (!message.member.roles.some(role => role.name === "PUGadmin")) {message.channel.send("Only PUGadmins can perform this command.");break;}
+			sender.createDM().then(function(channel) {
+				channel.send(log);
+			}, function(err) {
+				logStr("Couldn't send admincommands as DM.\n\n" + util.inspect(err))
+			});
+			break;
+
 	}
 }
 
@@ -464,7 +486,7 @@ client.once("ready", () => {
 	fs.readFile('data.json', (err, d) => {
 		if (err) {
 			if (err == "Error: ENOENT: no such file or directory, open 'data.json'") {
-				console.log("No data.json found. Creating a new one...");
+				logStr("No data.json found. Creating a new one...");
 				writeData();
 				return;
 			}
@@ -472,14 +494,14 @@ client.once("ready", () => {
 		}
 		data = JSON.parse(d);
 	});
-	console.log("Bot started.");
+	logStr("Bot started.");
 });
 
 client.on("message", message => {
 	try {
 		onMessage(message);
 	} catch (err) {
-		console.log("Error parsing message\n\n" + util.inspect(err));
+		logStr("Error parsing message\n\n" + util.inspect(err));
 	}
 });
 
@@ -487,15 +509,16 @@ client.on("messageUpdate", (oldMessage, newMessage) => {
 	try {
 		onMessage(message);
 	} catch (err) {
-		console.log("Error parsing messageUpdate:\n\n" + util.inspect(err));
+		logStr("Error parsing messageUpdate:\n\n" + util.inspect(err));
 	}
 });
 
 client.on("presenceUpdate", (oldMember, newMember) => {
 	try {
+		logStr("presenceUpdate");
 		onLeave(oldMember, newMember);
 	} catch (err) {
-		console.log("Error parsing prescenceUpdate:\n\n" + err);
+		logStr("Error parsing prescenceUpdate:\n\n" + util.inspect(err));
 	}
 });
 
@@ -508,9 +531,9 @@ client.on("guildMemberAdd", (guildMember) => {
 		.addField("This server is using a PUG bot (Me!) you can find me in the channel #"+ch.name+" on the server.", "For more info, write .help in "+ch, colums)
 	guildMember.user.createDM().then(function(channel) {
 		channel.send(rich);
-		console.log("Sent welcome message to "+guildMember.user.username);
+		logStr("Sent welcome message to "+guildMember.user.username);
 	}, function(err) {
-		console.log("Couldn't send welcome message to "+guildMember.user.username+"\n\n" + err)
+		logStr("Couldn't send welcome message to "+guildMember.user.username+"\n\n" + util.inspect(err))
 	});
 });
 
