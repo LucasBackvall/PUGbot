@@ -488,7 +488,11 @@ function onMessage(message) {
 		case "log":
 			if (!message.member.roles.some(role => role.name === "PUGadmin")) {message.channel.send("Only PUGadmins can perform this command.");break;}
 			sender.createDM().then(function(channel) {
-				channel.send(log);
+				if (log.length > 2000) {
+					channel.send(log.substr(log.length - 2000));
+				} else {
+					channel.send(log);
+				}
 			}, function(err) {
 				logStr("Couldn't send admincommands as DM.\n\n" + util.inspect(err))
 			});
@@ -523,7 +527,7 @@ client.on("message", message => {
 
 client.on("messageUpdate", (oldMessage, newMessage) => {
 	try {
-		onMessage(message);
+		onMessage(newMessage);
 	} catch (err) {
 		logStr("Error parsing messageUpdate:\n\n" + util.inspect(err));
 	}
