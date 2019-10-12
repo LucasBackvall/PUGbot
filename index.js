@@ -270,6 +270,7 @@ function onMessage(message) {
 					.addField(prefix + "setchannel", "Sets the current channel as the channel the bot will listen to and respond in.", colums)
 					.addField(prefix + "resetchannel", "Allows the bot to listen to and respond in any channel.", colums)
 					.addField(prefix + "setinvite <link>", "Set the new invite link.", colums)
+					.addField(prefix + "log", "Sends last 2000 chars of the log to you.", colums)
 				sender.createDM().then(function(channel) {
 					channel.send(rich);
 				}, function(err) {
