@@ -40,9 +40,9 @@ function resetTimer(guild) {
 	timer[guild] = false
 }
 
-function printPUG(guild, i) {
+function printPUG(guild, i, len) {
 	let msg = pugs[i].name
-	while (msg.length < 3) { msg += " ";}
+	while (msg.length < len) { msg += " ";}
 	// \uD83C\uDF00 
 	msg += " (" + data[guild].players[i].length + "/" + pugs[i].max + "): ";
 	let first = true;
@@ -134,8 +134,12 @@ function removePlayerAll(guild, userid) {
 
 function listactive(guild) {
 	let anyone = false;
+	let len = 0;
 	for (let i = 0; i < data[guild].players.length; i++) {
-		if (data[guild].players[i].length > 0) {anyone = true;}
+		if (data[guild].players[i].length > 0) {
+			anyone = true;
+			if (pugs[i].name.length > len) {len = pugs[i].name.length}
+		}
 	}
 	if (!anyone) {
 		return "There is currently nobody registered for a PUG.";
@@ -143,7 +147,7 @@ function listactive(guild) {
 	let msg = "```fix\nAll PUGs with registered players:\n";
 	for (let i = 0; i < pugs.length; i++) {
 		if (data[guild].players[i].length > 0) {
-			msg += "\n" + printPUG(guild, i);
+			msg += "\n" + printPUG(guild, i, len);
 		}
 	}
 	return msg + "```"
@@ -430,11 +434,19 @@ function onMessage(message) {
 			}
 			if (args.length == 0) message.channel.send("@here\n" + listactive(guild))
 			else {
-				let msg = "@here\n```fix\nFollowing PUG(s) were promoted by "+sender.username+"\n";
+				let pugIds = [];
+				let len = 0;
 				args.forEach(function (arg) {
 					for (let i = 0; i < pugs.length; i++) {
-						if (pugs[i].name == arg) msg += "\n" + printPUG(guild, i)
+						if (pugs[i].name == arg) {
+							pugIds.push(i);
+							if (pugs[i].name.length > len) {len = pugs[i].name.length}
+						}
 					}
+				});
+				let msg = "@here\n```fix\nFollowing PUG(s) were promoted by "+sender.username+"\n";
+				pugIds.forEach(function(pugId) {
+					msg += "\n" + printPUG(guild, pugId, len)
 				});
 				msg += "```";
 				message.channel.send(msg);
@@ -454,9 +466,13 @@ function onMessage(message) {
 		// List all PUGs
 		case "list":
 		case "ls":
+			let len = 0;
+			pugs.forEach(function(pug) {
+				if (pug.name.length > len) {len = pug.name.length}
+			});
 			let msg = "```fix\nAll PUGs:\n";
 			for (let i = 0; i < pugs.length; i++) {
-				msg += "\n" + printPUG(guild, i);
+				msg += "\n" + printPUG(guild, i, len);
 			}
 			message.channel.send(msg + "```");
 			break;
