@@ -179,8 +179,8 @@ function onLeave(oldMember, newMember) {
 		if (newMember.presence.status == "offline") {
 			if (removePlayerAll(guild, newMember.user.id) && ch != ".") {
 				toChannel(ch).send("Removed "+newMember.user.username+" from all lists because he/she went offline.\n\n"+listactive(guild));
+				logStr("Removed **"+newMember.user.username+"** from all lists because he/she went offline.");
 			}
-			logStr("Removed **"+newMember.user.username+"** from all lists because he/she went offline.");
 			writeData();
 		}
 	} catch(err) {
@@ -536,7 +536,6 @@ client.on("messageUpdate", (oldMessage, newMessage) => {
 
 client.on("presenceUpdate", (oldMember, newMember) => {
 	try {
-		logStr("presenceUpdate");
 		onLeave(oldMember, newMember);
 	} catch (err) {
 		logStr("Error parsing prescenceUpdate:\n\n" + util.inspect(err));
