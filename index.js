@@ -218,6 +218,7 @@ function onMessage(message) {
 				"last": "No games since bot was started.",
 				"invite": ".",
 				"channel":"."
+				"promote":true
 			}
 		pugs.forEach(function(pug) {
 			data[guild].players.push(new Array());
@@ -271,6 +272,7 @@ function onMessage(message) {
 					.addField(prefix + "resetchannel", "Allows the bot to listen to and respond in any channel.", colums)
 					.addField(prefix + "setinvite <link>", "Set the new invite link.", colums)
 					.addField(prefix + "log", "Sends last 2000 chars of the log to you.", colums)
+					.addField(prefix + "togglepromote", "Enable/Disable the promote command.", colums)
 				sender.createDM().then(function(channel) {
 					channel.send(rich);
 				}, function(err) {
@@ -426,9 +428,24 @@ function onMessage(message) {
 			writeData();
 			break;
 		
+		case "togglepromote":
+			if (!message.member.roles.some(role => role.name === "PUGadmin")) {message.channel.send("Only PUGadmins can perform this command.");break;}
+			if (data[guild].promote != true) {
+				data[guild].promote = true;
+				message.channel.send("Promoting is now enabled on this server.");
+			} else {
+				data[guild].promote = false;
+				message.channel.send("Promoting is now disabled on this server.");
+			}
+			writeData();
+			break;
+
 		
 		case "promote":
 		case "p":
+			if (data[guild].promote != true) {
+				message.channel.send("Promoting is disabled on this server.");
+			}
 			if (timer[guild] == true) {
 				message.channel.send("Can't promote again yet.");
 				break;
