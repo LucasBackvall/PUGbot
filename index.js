@@ -217,7 +217,7 @@ function onMessage(message) {
 				"players": [],
 				"last": "No games since bot was started.",
 				"invite": ".",
-				"channel":"."
+				"channel":".",
 				"promote":true
 			}
 		pugs.forEach(function(pug) {
@@ -445,6 +445,7 @@ function onMessage(message) {
 		case "p":
 			if (data[guild].promote != true) {
 				message.channel.send("Promoting is disabled on this server.");
+				break;
 			}
 			if (timer[guild] == true) {
 				message.channel.send("Can't promote again yet.");
