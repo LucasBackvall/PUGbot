@@ -180,8 +180,8 @@ function onLeave(oldMember, newMember) {
 			if (removePlayerAll(guild, newMember.user.id) && ch != ".") {
 				toChannel(ch).send("Removed "+newMember.user.username+" from all lists because he/she went offline.\n\n"+listactive(guild));
 				logStr("Removed **"+newMember.user.username+"** from all lists because he/she went offline.");
+				writeData();
 			}
-			writeData();
 		}
 	} catch(err) {
 		// Catching presence updates from servers where a data-object hasn't been defined yet.
