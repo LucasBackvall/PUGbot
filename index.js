@@ -158,8 +158,8 @@ function updateLast(guild, players, pug) {
 	data[guild].last = "Last game:\n\n**"+pug.name+"** with: ";
 	let first = true;
 	players.forEach(function (player) {
-		if (first) {data[guild].last += "**"+player.username+"**";first=false;}
-		else {data[guild].last += ", " + "**"+player.username+"**";}
+		if (first) {data[guild].last += "**"+client.users.get(player).username+"**";first=false;}
+		else {data[guild].last += ", " + "**"+client.users.get(player).username+"**";}
 	});
 }
 
@@ -524,7 +524,7 @@ function onMessage(message) {
 client.once("ready", () => {
 	fs.readFile('data.json', (err, d) => {
 		if (err) {
-			if (err == "Error: ENOENT: no such file or directory, open 'data.json'") {
+			if (err.errno == -4058) {
 				logStr("No data.json found. Creating a new one...");
 				writeData();
 				return;
